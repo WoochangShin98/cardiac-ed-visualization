@@ -1,0 +1,25 @@
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Local datasets and patient-level data
+data/*
+!data/.gitkeep
+*.csv
+*.csv.gz
+*.parquet
+*.feather
+
+# Generated outputs
+outputs/
+reports/
+*.log
+
+# Editor and OS files
+.vscode/
+.DS_Store
+Thumbs.db
