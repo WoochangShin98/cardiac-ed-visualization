@@ -17,8 +17,8 @@
 <header class="hero">
 	<div class="glow" aria-hidden="true"></div>
 	<div class="inner">
-		<div class="eyebrow">CSCI 5609 · The Outliers · Ananya Nair, Woochang Shin, Sruti Paladugu</div>
-		<h1>How do cardiac patients' emergency department experiences differ from everyone else's?</h1>
+				<div class="eyebrow">CSCI 5609 · The Outliers · Woochang Shin, Sruti Paladugu, Ananya Nair</div>
+		<h1>How does a cardiac patient’s ED journey differ from everyone else’s?</h1>
 		<p class="lede">
 			Chest pain is one of the most common reasons people come to an emergency department. Using
 			MIMIC-IV-ED (Beth Israel Deaconess Medical Center, 2011–2019), we follow visits from triage to
