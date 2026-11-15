@@ -55,13 +55,13 @@
 </section>
 
 <style>
-	.scene { margin: 0 auto; max-width: 1240px; padding: 8vh 28px 0; scroll-margin-top: 60px; }
+	.scene { margin: 0 auto; max-width: 1400px; padding: 8vh 28px 0; scroll-margin-top: 60px; }
 	.scene-head { display: flex; gap: 18px; align-items: baseline; margin-bottom: 4vh; }
 	.num { font-size: 3.4rem; font-weight: 800; color: #dbe4f3; line-height: 1; }
 	.kicker { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #2563eb; }
 	h2 { margin: 4px 0 0; font-size: clamp(1.6rem, 3vw, 2.3rem); letter-spacing: -0.025em; line-height: 1.15; }
 
-	.layout { display: grid; grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.6fr); gap: 40px; }
+	.layout { display: grid; grid-template-columns: minmax(250px, 0.62fr) minmax(0, 1.9fr); gap: 32px; }
 	.steps { position: relative; z-index: 2; }
 	.step { min-height: 78vh; display: flex; align-items: center; }
 	.step:first-child { min-height: 50vh; align-items: flex-start; }
