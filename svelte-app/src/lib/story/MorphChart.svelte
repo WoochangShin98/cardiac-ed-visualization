@@ -123,10 +123,33 @@
 							onmouseleave={hideTip} />
 					{/if}
 				{/each}
+			{:else}
+				<!-- group hidden for privacy (fewer than min_cell_size visits): show a placeholder, not a gap -->
+				{@const colW = iw / levels.length}
+				{@const bw = Math.min(46, colW * 0.32)}
+				{@const rowH = ih / levels.length}
+				{@const bh = Math.min(34, rowH * 0.36)}
+				{#if step === 0}
+					{@const x0 = m.left + b.ai * colW + colW / 2 - bw - 2 + b.gi * (bw + 4)}
+					<g role="presentation"
+						onmousemove={(e) => showTip(e, [`${b.g} · acuity ${b.a}`, `Fewer than ${cube.meta.min_cell_size} visits`, 'Hidden to protect privacy'])}
+						onmouseleave={hideTip}>
+						<rect x={x0} y={m.top + ih - 46} width={bw} height="46" rx="3" class="hidden-box" style:stroke={b.col} />
+						<text x={x0 + bw / 2} y={m.top + ih - 26} text-anchor="middle" class="hidden-txt">n &lt;</text>
+						<text x={x0 + bw / 2} y={m.top + ih - 12} text-anchor="middle" class="hidden-txt">{cube.meta.min_cell_size}</text>
+					</g>
+				{:else}
+					{@const y0 = m.top + b.ai * rowH + rowH / 2 - bh - 2 + b.gi * (bh + 4)}
+					<rect x={m.left} y={y0} width={iw} height={bh} rx="3" class="hidden-box" style:stroke={b.col} />
+					<text x={m.left + 10} y={y0 + bh / 2 + 4} class="hidden-txt">{b.g === NON_CARDIAC ? 'Non-cardiac' : b.g}: fewer than {cube.meta.min_cell_size} visits, hidden for privacy</text>
+				{/if}
 			{/if}
 		{/each}
 	</svg>
 </div>
+{#if bars.some((b) => !b.ok)}
+	<div class="note">Dashed boxes: fewer than {cube.meta.min_cell_size} visits, hidden to protect patient privacy.</div>
+{/if}
 <div class="foot" style:opacity={step >= 2 ? 1 : 0}>
 	Severe pain (7–10): <b style:color={COLORS.focus}>{pct(severe(all.f))}</b> of {filters.group} vs
 	<b style:color={COLORS.baseline}>{pct(severe(all.b))}</b> of non-cardiac visits
@@ -140,6 +163,9 @@
 	.ramp { display: inline-flex; border-radius: 4px; overflow: hidden; }
 	.ramp span { width: 16px; height: 14px; font-size: 9px; line-height: 14px; text-align: center; color: #fff; text-shadow: 0 0 2px #000a; transition: background 0.6s; }
 	.wrap { flex: 1 1 auto; min-height: 0; }
+	.hidden-box { fill: #f8fafc; stroke-dasharray: 4 3; stroke-width: 1.5; }
+	.hidden-txt { font-size: 11px; font-weight: 700; fill: #64748b; }
+	.note { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
 	svg { display: block; }
 	.seg { transition: fill 0.6s ease; }
 	.fade, .foot { transition: opacity 0.5s ease; }
