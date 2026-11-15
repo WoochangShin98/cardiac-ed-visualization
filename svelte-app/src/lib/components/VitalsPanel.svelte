@@ -29,7 +29,7 @@
 		{@const m = META[v]}
 		<div class="panel">
 			<div class="title">{m.label} <small>{m.unit}</small></div>
-			<svg width={W} height="62">
+			<svg viewBox="0 0 {W} 62" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
 				<rect x={sx(m.normal[0], m.domain)} width={sx(m.normal[1], m.domain) - sx(m.normal[0], m.domain)} y="4" height="40" fill="#ecfdf5" />
 				<text x={sx(m.normal[0], m.domain) + 3} y="13" class="norm">typical</text>
 				{#each [{ c: focus, color: COLORS.focus, y: 20, name: filters.group }, { c: base, color: COLORS.baseline, y: 34, name: NON_CARDIAC }] as b}
@@ -49,7 +49,7 @@
 </div>
 
 <style>
-	.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+	.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; align-content: center; }
 	.panel { border: 1px solid #e8edf4; border-radius: 10px; padding: 8px 8px 2px; background: #fff; }
 	.title { font-size: 13px; font-weight: 700; color: #172033; }
 	.title small { font-weight: 500; color: #94a3b8; }

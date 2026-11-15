@@ -36,15 +36,16 @@
 
 	const iw = $derived(Math.max(100, w - m.left - m.right));
 	const ih = $derived(Math.max(100, h - m.top - m.bottom));
-	const rowH = $derived(Math.min(56, ih / groups.length));
-	const bh = $derived(rowH * 0.58);
+	const rowH = $derived(Math.min(92, ih / groups.length));
+	const top = $derived(Math.max(0, (ih - groups.length * rowH) / 2));
+	const bh = $derived(Math.min(44, rowH * 0.56));
 
 	const geo = Tween.of(
 		() =>
 			rows.map((r, i) => {
 				const exploded = step >= 1;
 				const slot = i < 2 ? i : exploded ? i : 1;
-				return { y: m.top + slot * rowH + (i >= 2 && exploded ? 6 : 0), w: (val(r) / maxV) * iw, op: i < 2 || exploded ? 1 : 0 };
+				return { y: (top + slot * rowH + (i >= 2 && exploded ? 6 : 0)) / ih, w: val(r) / maxV, op: i < 2 || exploded ? 1 : 0 };
 			}),
 		{ duration: reduceMotion() ? 0 : 850, easing: cubicInOut }
 	);
@@ -58,8 +59,9 @@
 
 <div class="wrap" bind:clientWidth={w} bind:clientHeight={h}>
 	<svg width={w} height={h} role="img" aria-label="Cardiac conditions compared">
-		{#each geo.current as gg, i}
+		{#each geo.current as g0, i}
 			{@const r = rows[i]}
+			{@const gg = { ...g0, y: m.top + g0.y * ih, w: g0.w * iw }}
 			{@const clickable = r.g !== NON_CARDIAC && step >= 1}
 			<g style:opacity={gg.op} class="row" class:clickable class:sel={r.g === filters.group}
 				role={clickable ? 'button' : 'presentation'}

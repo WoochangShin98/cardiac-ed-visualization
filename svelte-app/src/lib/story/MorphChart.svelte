@@ -45,18 +45,18 @@
 		const colW = iw / levels.length;
 		const bw = Math.min(46, colW * 0.32);
 		const rowH = ih / levels.length;
-		const bh = Math.min(26, rowH * 0.36);
+		const bh = Math.min(34, rowH * 0.36);
 		for (const b of bars) {
 			if (step === 0) {
 				const H = (b.mean / 10) * ih;
 				const x0 = m.left + b.ai * colW + colW / 2 - bw - 2 + b.gi * (bw + 4);
 				for (let k = 0; k < K; k++)
-					out.push({ x: x0, y: m.top + ih - ((k + 1) * H) / K, w: bw, h: H / K });
+					out.push({ x: (x0 - m.left) / iw, y: 1 - ((k + 1) * H) / K / ih, w: bw / iw, h: H / K / ih });
 			} else {
 				const y0 = m.top + b.ai * rowH + rowH / 2 - bh - 2 + b.gi * (bh + 4);
 				let acc = 0;
 				for (let k = 0; k < K; k++) {
-					out.push({ x: m.left + acc * iw, y: y0, w: Math.max(0, b.shares[k] * iw - 0.6), h: bh });
+					out.push({ x: acc, y: (y0 - m.top) / ih, w: Math.max(0, b.shares[k] - 0.6 / iw), h: bh / ih });
 					acc += b.shares[k];
 				}
 			}
@@ -115,7 +115,7 @@
 				{#each { length: K } as _, k}
 					{@const r = geo.current[bi * K + k]}
 					{#if r}
-						<rect x={r.x} y={r.y} width={Math.max(0, r.w)} height={Math.max(0, r.h)} style:fill={fillFor(bi, k)} class="seg"
+						<rect x={m.left + r.x * iw} y={m.top + r.y * ih} width={Math.max(0, r.w * iw)} height={Math.max(0, r.h * ih)} style:fill={fillFor(bi, k)} class="seg"
 							role="presentation"
 							onmousemove={(e) => showTip(e, step === 0
 								? [`${b.g} · acuity ${b.a}`, `Mean pain ${fmt1(b.mean)} / 10`, `n = ${fmtInt(b.c?.pain.n)}`]

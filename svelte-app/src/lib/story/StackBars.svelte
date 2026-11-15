@@ -25,9 +25,13 @@
 	} = $props();
 
 	let w = $state(600);
-	const m = { left: 150, right: 16 };
-	const barH = 34;
-	const gap = 22;
+	let hgt = $state(320);
+	const longest = $derived(Math.max(...rows.map((r) => r.label.length), 8));
+	// bars grow with the available box height so the card never looks empty
+	const barH = $derived(Math.max(34, Math.min(92, ((hgt - 30) / Math.max(1, rows.length)) * 0.55)));
+	const gap = $derived(Math.min(56, barH * 0.65));
+	const block = $derived(rows.length * barH + (rows.length - 1) * gap);
+	const top = $derived(Math.max(8, (hgt - block) / 2 - 10));
 
 	const shares = $derived(
 		rows.map((r) => {
@@ -36,8 +40,10 @@
 		})
 	);
 	const tw = Tween.of(() => shares, { duration: reduceMotion() ? 0 : 800, easing: cubicOut });
+	// label column grows with the longest row label (capped at 40% of the width)
+	const m = $derived({ left: Math.min(w * 0.4, Math.max(150, longest * 9.6 + 28)), right: 16 });
 	const iw = $derived(Math.max(100, w - m.left - m.right));
-	const h = $derived(rows.length * (barH + gap) + 10);
+	const fs = $derived(Math.max(13, Math.min(16, barH * 0.26)));
 </script>
 
 <div class="legend">
@@ -45,13 +51,13 @@
 		<span class:dim={highlight && !highlight.includes(i)}><i style:background={partColors[i]}></i>{l}</span>
 	{/each}
 </div>
-<div class="wrap" bind:clientWidth={w}>
-	<svg width={w} height={h} role="img" aria-label="Stacked bar comparison">
+<div class="wrap" bind:clientWidth={w} bind:clientHeight={hgt}>
+	<svg width={w} height={hgt} role="img" aria-label="Stacked bar comparison">
 		{#each rows as r, ri}
-			{@const y = ri * (barH + gap) + 4}
+			{@const y = top + ri * (barH + gap)}
 			<rect x="0" y={y + 6} width="5" height={barH - 12} rx="2" fill={r.color} />
-			<text x="12" y={y + barH / 2 - 2} class="lbl">{r.label}</text>
-			<text x="12" y={y + barH / 2 + 13} class="n">n ≈ {fmtInt(r.n)}</text>
+			<text x="14" y={y + barH / 2 - 2} class="lbl" style:font-size="{fs + 1}px">{r.label}</text>
+			<text x="14" y={y + barH / 2 + fs} class="n">n ≈ {fmtInt(r.n)}</text>
 			{#each tw.current[ri] ?? [] as s, pi}
 				{@const x0 = (tw.current[ri] ?? []).slice(0, pi).reduce((a, b) => a + b, 0)}
 				{@const dim = highlight && !highlight.includes(pi)}
@@ -63,8 +69,8 @@
 					onmouseleave={hideTip}
 				/>
 				{#if s > 0.07}
-					<text x={m.left + (x0 + s / 2) * iw} y={y + barH / 2 + 5} text-anchor="middle"
-						class="val" class:dark={darkText.includes(pi)} style:opacity={dim ? 0.25 : 1}>{pct(s)}</text>
+					<text x={m.left + (x0 + s / 2) * iw} y={y + barH / 2 + fs * 0.36} text-anchor="middle"
+						style:font-size="{fs}px" class="val" class:dark={darkText.includes(pi)} style:opacity={dim ? 0.25 : 1}>{pct(s)}</text>
 				{/if}
 			{/each}
 		{/each}
@@ -76,7 +82,7 @@
 	.legend span { display: inline-flex; align-items: center; gap: 5px; transition: opacity 0.5s; }
 	.legend span.dim { opacity: 0.35; }
 	.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-	.wrap { width: 100%; }
+	.wrap { width: 100%; flex: 1 1 auto; min-height: 0; }
 	svg { display: block; }
 	.lbl { font-size: 14px; font-weight: 700; fill: #172033; }
 	.n { font-size: 11px; fill: #64748b; }

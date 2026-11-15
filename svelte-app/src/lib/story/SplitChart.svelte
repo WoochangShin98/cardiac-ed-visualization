@@ -35,6 +35,7 @@
 	const iw = $derived(Math.max(100, w - m.left - m.right));
 	const ih = $derived(Math.max(100, h - m.top - m.bottom));
 	const rowH = $derived(ih / levels.length);
+	const boxH = $derived(Math.max(14, Math.min(24, rowH * 0.2)));
 
 	const cells = $derived(
 		levels.map((a) => ({
@@ -49,8 +50,11 @@
 				const f = stats(c.f);
 				const b = stats(c.b);
 				return {
-					y: step === 0 ? m.top + ih / 2 - rowH / 2 : m.top + i * rowH,
-					op: f && b ? (step === 0 && i > 0 ? 0 : 1) : 0,
+					// y as a fraction of the plot height, so resizing never leaves rows stranded
+					y: step === 0 ? 0.5 - 0.5 / levels.length : i / levels.length,
+					op: (f || b) && !(step === 0 && i > 0) ? 1 : 0,
+					fo: f ? 1 : 0,
+					bo: b ? 1 : 0,
 					f: f ?? [0, 0, 0, 0, 0],
 					b: b ?? [0, 0, 0, 0, 0]
 				};
@@ -60,7 +64,6 @@
 
 	const x = (v: number) => m.left + (Math.min(v, maxX) / maxX) * iw;
 	const ticks = $derived(Array.from({ length: maxX / 4 + 1 }, (_, i) => i * 4));
-	const boxH = 16;
 </script>
 
 <div class="title">Length of stay by triage acuity</div>
@@ -80,23 +83,27 @@
 		{/each}
 		<text x={m.left + iw / 2} y={h - 6} class="axis" text-anchor="middle">Hours in the ED · box = middle 50%, tick = median, line = 10th–90th pct</text>
 
-		{#each geo.current as g, i}
+		{#each geo.current as g0, i}
 			{@const c = cells[i]}
+			{@const g = { ...g0, y: m.top + g0.y * ih }}
 			<g style:opacity={g.op}>
 				<text x="4" y={g.y + rowH / 2 + 4} class="lbl">{step === 0 ? 'All visits' : `Acuity ${levels[i]}`}</text>
 				{#if step > 0 && (i === 0 || i === 4)}
 					<text x="4" y={g.y + rowH / 2 + 18} class="hint">{i === 0 ? 'most urgent' : 'least urgent'}</text>
 				{/if}
-				{#each [{ s: g.f, col: COLORS.focus, dy: -boxH / 2 - 3, cell: c.f, name: filters.group }, { s: g.b, col: COLORS.baseline, dy: boxH / 2 + 3, cell: c.b, name: NON_CARDIAC }] as b}
+				{#each [{ s: g.f, o: g.fo, col: COLORS.focus, dy: -boxH / 2 - 3, cell: c.f, name: filters.group }, { s: g.b, o: g.bo, col: COLORS.baseline, dy: boxH / 2 + 3, cell: c.b, name: NON_CARDIAC }] as b}
 					{@const cy = g.y + rowH / 2 + b.dy}
-					<g role="presentation"
+					{#if b.o < 0.5}
+						<text x={m.left + 6} y={cy + 4} class="hint">{b.name === NON_CARDIAC ? 'Non-cardiac' : 'Cardiac'}: too few visits to show</text>
+					{/if}
+					<g role="presentation" style:opacity={b.o}
 						onmousemove={(e) => b.cell && showTip(e, [`${b.name} · ${step === 0 ? 'all acuities' : 'acuity ' + levels[i]}`, `Median ${fmt1(b.cell.los.median)} h (IQR ${fmt1(b.cell.los.q1)}–${fmt1(b.cell.los.q3)})`, `n = ${fmtInt(b.cell.los.n)}`])}
 						onmouseleave={hideTip}>
 						<line x1={x(b.s[0])} x2={x(b.s[4])} y1={cy} y2={cy} stroke={b.col} stroke-width="1.5" />
 						<rect x={x(b.s[1])} y={cy - boxH / 2} width={Math.max(1, x(b.s[3]) - x(b.s[1]))} height={boxH} fill={b.col} fill-opacity="0.2" stroke={b.col} rx="3" />
 						<line x1={x(b.s[2])} x2={x(b.s[2])} y1={cy - boxH / 2} y2={cy + boxH / 2} stroke={b.col} stroke-width="3.5" />
 					</g>
-					<text x={w - m.right + 8} y={cy + 4} class="val" fill={b.col}>{fmt1(b.s[2])} h</text>
+					<text x={w - m.right + 8} y={cy + 4} class="val" fill={b.col} style:opacity={b.o}>{fmt1(b.s[2])} h</text>
 				{/each}
 			</g>
 		{/each}

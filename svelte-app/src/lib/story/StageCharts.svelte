@@ -68,7 +68,7 @@
 	{:else}
 		<div class="title">Vital signs at triage</div>
 		<div class="sub">Median (dot) and middle 50% (bar); green band = typical adult range. Hover for exact values.</div>
-		<VitalsPanel {cube} />
+		<div class="vitals"><VitalsPanel {cube} /></div>
 	{/if}
 {:else if kind === 'acuity'}
 	<div class="title">How urgent is each visit at triage?</div>
@@ -79,11 +79,15 @@
 {:else}
 	<div class="title">How many diagnoses are recorded per visit?</div>
 	<div class="sub">{step === 0 ? 'Share of visits by number of distinct diagnoses' : 'Split by disposition: admitted vs. sent home'}</div>
-	<StackBars rows={dxRows} partLabels={['0–1 diagnosis', '2', '3', '4 or more']}
-		partColors={['#e0e7ff', '#a5b4fc', '#6366f1', '#3730a3']} highlight={[2, 3]} darkText={[0, 1]} />
+	{#key dxRows.length}
+		<StackBars rows={dxRows} partLabels={['0–1 diagnosis', '2', '3', '4 or more']}
+			partColors={['#e0e7ff', '#a5b4fc', '#6366f1', '#3730a3']} highlight={[2, 3]} darkText={[0, 1]} />
+	{/key}
 {/if}
 
 <style>
 	.title { font-size: 1.1rem; font-weight: 700; }
 	.sub { font-size: 0.82rem; color: #64748b; margin-top: 2px; }
+	.vitals { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
+	.vitals :global(.grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 </style>
