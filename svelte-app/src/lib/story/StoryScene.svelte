@@ -55,7 +55,7 @@
 </section>
 
 <style>
-	.scene { margin: 0 auto; max-width: 1240px; padding: 12vh 28px 0; }
+	.scene { margin: 0 auto; max-width: 1240px; padding: 8vh 28px 0; scroll-margin-top: 60px; }
 	.scene-head { display: flex; gap: 18px; align-items: baseline; margin-bottom: 4vh; }
 	.num { font-size: 3.4rem; font-weight: 800; color: #dbe4f3; line-height: 1; }
 	.kicker { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #2563eb; }
@@ -80,7 +80,7 @@
 
 	.graphic { position: relative; }
 	.graphic-inner {
-		position: sticky; top: 10vh; height: 80vh;
+		position: sticky; top: calc(8vh + 52px); height: calc(84vh - 52px);
 		background: #fff; border-radius: 20px; border: 1px solid #e6ebf3;
 		box-shadow: 0 16px 40px rgba(23, 43, 77, 0.08);
 		padding: 22px 24px; display: flex; flex-direction: column;

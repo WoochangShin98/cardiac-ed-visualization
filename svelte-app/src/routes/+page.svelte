@@ -12,6 +12,9 @@
 	import SplitChart from '#lib/story/SplitChart.svelte';
 	import MorphChart from '#lib/story/MorphChart.svelte';
 	import ExplodeChart from '#lib/story/ExplodeChart.svelte';
+	import JourneyStepper from '#lib/story/JourneyStepper.svelte';
+	import PatientScene from '#lib/story/PatientScene.svelte';
+	import StageCharts from '#lib/story/StageCharts.svelte';
 
 	import FilterBar from '#lib/components/FilterBar.svelte';
 	import LosByAcuity from '#lib/components/LosByAcuity.svelte';
@@ -65,6 +68,19 @@
 			.filter((g) => ![ALL, NON_CARDIAC, CARDIAC_ALL].includes(g))
 			.map((g) => ({ g, c: storyCell(cb, g) }))
 			.filter((x) => x.c);
+		const acu12 = (g: string) => {
+			const tot = ['1', '2', '3', '4', '5'].reduce((a, x) => a + (storyCell(cb, g, { acuity: x })?.n ?? 0), 0) || 1;
+			return ((storyCell(cb, g, { acuity: '1' })?.n ?? 0) + (storyCell(cb, g, { acuity: '2' })?.n ?? 0)) / tot;
+		};
+		const dx3 = (g: string, dispo: string) => {
+			const c = storyCell(cb, g, { dispo });
+			return c ? share(c.dx, 3) : 0; // dx labels: 0,1,2,3,... -> index 3 = "3"
+		};
+		const home = (c: Cell | null) => {
+			const d = c?.dispo.map(nz) ?? [];
+			const t = d.reduce((a, x) => a + x, 0);
+			return t ? d[1] / t : 0;
+		};
 		const byLos = [...conds].sort((p, q) => nz(p.c!.los.median) - nz(q.c!.los.median));
 		const byAdm = [...conds].sort((p, q) => admit(p.c) - admit(q.c));
 		return {
@@ -76,6 +92,16 @@
 			meanF: f?.pain.mean, meanB: b?.pain.mean,
 			losLo: byLos[0], losHi: byLos[byLos.length - 1],
 			admLo: byAdm[0], admHi: byAdm[byAdm.length - 1],
+			// journey-stage numbers
+			ambF: f ? (nz(f.transport[0]) + nz(f.transport[2])) / Math.max(1, f.n) : 0,
+			ambB: b ? (nz(b.transport[0]) + nz(b.transport[2])) / Math.max(1, b.n) : 0,
+			acu12F: acu12(filters.group), acu12B: acu12(NON_CARDIAC),
+			sbpF: f?.vitals.sbp?.median, sbpB: b?.vitals.sbp?.median,
+			hrF: f?.vitals.heartrate?.median, hrB: b?.vitals.heartrate?.median,
+			admF: admit(f), admB: admit(b),
+			homeF: home(f),
+			dx3F: f ? share(f.dx, 3) : 0, dx3B: b ? share(b.dx, 3) : 0, // index 3 = "3 diagnoses"
+			dx3HomeF: dx3(filters.group, 'Home'), dx3HomeB: dx3(NON_CARDIAC, 'Home'),
 			total: cb.meta.total_encounters,
 			cardiac: storyCell(cb, CARDIAC_ALL)?.n ?? 0,
 			losC: storyCell(cb, CARDIAC_ALL)?.los.median ?? 0
@@ -105,7 +131,7 @@
 	);
 	const chestLink = $derived(
 		N && N.losHi?.g === N.admLo?.g
-			? ` ${N.losHi?.g} visits stay the longest yet are admitted least often — the same "long stay, then home" pattern we saw in scene 03.`
+			? ` ${N.losHi?.g} visits stay the longest yet are admitted least often — the same "long stay, then home" pattern we just saw.`
 			: ''
 	);
 </script>
@@ -125,63 +151,100 @@
 	<Hero total={N.total} cardiac={N.cardiac} losC={N.losC} losN={N.losB ?? 0} />
 
 	<div id="story" class="story">
-		{#if filters.group !== CARDIAC_ALL}
-			<div class="focus-banner">
-				Story focus: <b>{filters.group}</b>
-				<button onclick={() => (filters.group = CARDIAC_ALL)}>back to all cardiac</button>
-			</div>
-		{/if}
+		<JourneyStepper stages={[
+			{ id: 'stage-arrival', label: 'Arrival' },
+			{ id: 'stage-triage', label: 'Triage' },
+			{ id: 'stage-stay', label: 'ED stay' },
+			{ id: 'stage-dispo', label: 'Disposition' },
+			{ id: 'explore', label: 'Explore' }
+		]} />
 
-		<StoryScene
-			num="02" kicker="The gap" title="Cardiac patients stay longer"
-			steps={[
-				`Most emergency visits are short. For <b class="n">non-cardiac</b> patients the median stay is <b class="n">${fmt1(N.losB)} hours</b>.`,
-				`<b class="c">${Gc}</b> visits are shifted to the right: a median of <b class="c">${fmt1(N.losF)} hours</b> — about <b>${fmt1(N.gap)} hours longer</b>.`,
-				`The difference is clearest in the long tail: <b class="c">${pct(N.tailF)}</b> of ${G} visits last 12 hours or more, versus <b class="n">${pct(N.tailB)}</b> of non-cardiac visits.`
-			]}
-		>
-			{#snippet graphic(step)}<GapChart cube={cube!} {step} />{/snippet}
-		</StoryScene>
+		<!-- ================= Stage 1 · Arrival ================= -->
+		<div id="stage-arrival">
+			<PatientScene stage={0} kicker="Stage 1 · Arrival" title="You arrive at the emergency department"
+				narration="You feel a tight pain in your chest and head to the ED. Even how you get here says something." />
+			<StoryScene num="1" kicker="Arrival" title="Who comes in, and how?"
+				steps={[
+					`<b class="c">${pct(N.ambF)}</b> of ${G} patients arrive by ambulance, compared with <b class="n">${pct(N.ambB)}</b> of everyone else.`,
+					`At triage, though, their vital signs look much like everyone else’s: systolic blood pressure <b class="c">${fmt1(N.sbpF)}</b> vs <b class="n">${fmt1(N.sbpB)}</b> mmHg, heart rate <b class="c">${fmt1(N.hrF)}</b> vs <b class="n">${fmt1(N.hrB)}</b>. Hover a panel for exact values.`
+				]}>
+				{#snippet graphic(step)}<StageCharts cube={cube!} {step} kind="arrival" />{/snippet}
+			</StoryScene>
+		</div>
 
-		<StoryScene
-			num="03" kicker="A closer look" title="Is it just because they are sicker?"
-			steps={[
-				`Maybe ${G} patients simply arrive sicker, and sicker patients take longer. If so, the gap should disappear when we compare patients triaged at the <b>same urgency</b>.`,
-				`Split by triage acuity, the ${G} median is longer in <b>${N.kAll.k} of ${N.kAll.n}</b> acuity levels — ${verdict(N.kAll)}.`,
-				admText,
-				homeText
-			]}
-		>
-			{#snippet graphic(step)}<SplitChart cube={cube!} {step} />{/snippet}
-		</StoryScene>
+		<!-- ================= Stage 2 · Triage ================= -->
+		<div id="stage-triage">
+			<PatientScene stage={1} kicker="Stage 2 · Triage" title="A nurse decides how urgent you are"
+				narration="A triage nurse checks your vital signs and asks: on a scale of 0 to 10, how bad is the pain?"
+				recap={`${pct(N.ambF)} of ${G} patients arrived by ambulance, yet their vital signs look similar to others’.`} />
+			<StoryScene num="2" kicker="Triage" title="More urgent, but less pain"
+				steps={[
+					`Triage assigns every visit an acuity from <b>1 (most urgent)</b> to <b>5</b>.`,
+					`<b class="c">${pct(N.acu12F)}</b> of ${G} visits are triaged as acuity 1–2, versus <b class="n">${pct(N.acu12B)}</b> of other visits.`,
+					`In FP1 we compared <b>average</b> pain: ${G} visits report <b class="c">${fmt1(N.meanF)}</b> / 10 and non-cardiac visits <b class="n">${fmt1(N.meanB)}</b> / 10.`,
+					`But an average of 4 could mean everyone at 4 — or half at 0 and half at 8. Each bar now shows <b>100% of visits</b>, split into pain levels 0–10. Darker means more pain.`,
+					painText
+				]}>
+				{#snippet graphic(step)}
+					{#if step <= 1}<StageCharts cube={cube!} {step} kind="acuity" />{:else}<MorphChart cube={cube!} step={step - 2} />{/if}
+				{/snippet}
+			</StoryScene>
+		</div>
 
-		<StoryScene
-			num="04" kicker="Pain" title="Averages hide who is really hurting"
-			steps={[
-				`In our first look we compared <b>average</b> pain. Averaged over everyone, ${G} visits report <b class="c">${fmt1(N.meanF)}</b> / 10 and non-cardiac visits <b class="n">${fmt1(N.meanB)}</b> / 10.`,
-				`But an average of 4 could mean everyone at 4 — or half at 0 and half at 8. Each bar now shows <b>100% of visits</b>, split into pain levels 0–10. Darker means more pain.`,
-				painText
-			]}
-		>
-			{#snippet graphic(step)}<MorphChart cube={cube!} {step} />{/snippet}
-		</StoryScene>
+		<!-- ================= Stage 3 · ED stay ================= -->
+		<div id="stage-stay">
+			<PatientScene stage={2} kicker="Stage 3 · ED stay" title="Then you wait: tests, results, a decision"
+				narration="You are moved to an ED bed. Blood tests, an ECG, maybe a repeat test hours later…"
+				recap={`<b class="c">${pct(N.acu12F)}</b> of ${G} visits are triaged acuity 1–2 (vs ${pct(N.acu12B)}), yet fewer report severe pain.`} />
+			<StoryScene num="3" kicker="ED stay" title="Cardiac patients stay longer"
+				steps={[
+					`Most emergency visits are short. For <b class="n">non-cardiac</b> patients the median stay is <b class="n">${fmt1(N.losB)} hours</b>.`,
+					`<b class="c">${Gc}</b> visits are shifted to the right: a median of <b class="c">${fmt1(N.losF)} hours</b> — about <b>${fmt1(N.gap)} hours longer</b>.`,
+					`The difference is clearest in the long tail: <b class="c">${pct(N.tailF)}</b> of ${G} visits last 12 hours or more, versus <b class="n">${pct(N.tailB)}</b> of non-cardiac visits.`
+				]}>
+				{#snippet graphic(step)}<GapChart cube={cube!} {step} />{/snippet}
+			</StoryScene>
+			<StoryScene num="3" kicker="ED stay" title="Is it just because they are more urgent?"
+				steps={[
+					`Maybe ${G} patients are simply more urgent, and urgent patients take longer. If so, the gap should disappear when we compare patients triaged at the <b>same acuity</b>.`,
+					`Split by triage acuity, the ${G} median is longer in <b>${N.kAll.k} of ${N.kAll.n}</b> acuity levels — ${verdict(N.kAll)}.`
+				]}>
+				{#snippet graphic(step)}<SplitChart cube={cube!} {step} />{/snippet}
+			</StoryScene>
+		</div>
 
-		<StoryScene
-			num="05" kicker="Conditions" title="Not all cardiac patients are alike"
-			steps={[
-				`So far we have treated "cardiac" as one group.`,
-				`It is not. Split into five diagnosis groups, median stays range from <b>${fmt1(N.losLo?.c?.los.median)} h</b> (${N.losLo?.g}) to <b>${fmt1(N.losHi?.c?.los.median)} h</b> (${N.losHi?.g}).`,
-				`Admission rates differ even more: from <b>${pct(admit(N.admLo?.c ?? null))}</b> (${N.admLo?.g}) to <b>${pct(admit(N.admHi?.c ?? null))}</b> (${N.admHi?.g}).${chestLink}`,
-				`<b>Your turn:</b> click a condition. Every chart above and the explorer below will retell the story for that group — scroll up to replay it.`
-			]}
-		>
-			{#snippet graphic(step)}<ExplodeChart cube={cube!} {step} />{/snippet}
-		</StoryScene>
+		<!-- ================= Stage 4 · Disposition ================= -->
+		<div id="stage-dispo">
+			<PatientScene stage={3} kicker="Stage 4 · Disposition" title="Admitted upstairs, or sent home?"
+				narration="Finally, the doctor comes back with a decision."
+				recap={`${Gc} visits last a median <b class="c">${fmt1(N.losF)} h</b> vs ${fmt1(N.losB)} h, even at the same acuity.`}
+				admitted={pct(N.admF)} home={pct(N.homeF)} />
+			<StoryScene num="4" kicker="Disposition" title="Who spends the extra time?"
+				steps={[admText, homeText]}>
+				{#snippet graphic(step)}<SplitChart cube={cube!} step={step + 2} />{/snippet}
+			</StoryScene>
+			<StoryScene num="4" kicker="Disposition" title="Not all cardiac patients are alike"
+				steps={[
+					`So far we have treated "cardiac" as one group.`,
+					`It is not. Split into five diagnosis groups, median stays range from <b>${fmt1(N.losLo?.c?.los.median)} h</b> (${N.losLo?.g}) to <b>${fmt1(N.losHi?.c?.los.median)} h</b> (${N.losHi?.g}).`,
+					`Admission rates differ even more: from <b>${pct(admit(N.admLo?.c ?? null))}</b> (${N.admLo?.g}) to <b>${pct(admit(N.admHi?.c ?? null))}</b> (${N.admHi?.g}).${chestLink}`,
+					`<b>Your turn:</b> click a condition. Every chart and the explorer below will retell the journey for that group — scroll up to replay it.`
+				]}>
+				{#snippet graphic(step)}<ExplodeChart cube={cube!} {step} />{/snippet}
+			</StoryScene>
+			<StoryScene num="4" kicker="Disposition" title="More diagnoses to sort out"
+				steps={[
+					`<b class="c">${pct(N.dx3F)}</b> of ${G} visits record 3 or more diagnoses, versus <b class="n">${pct(N.dx3B)}</b> of other visits.`,
+					`Among patients <b>sent home</b>, <b class="c">${pct(N.dx3HomeF)}</b> of ${G} visits have 3+ diagnoses vs <b class="n">${pct(N.dx3HomeB)}</b>. More to rule out may mean a longer work-up before discharge — an interpretation we still need to test.`
+				]}>
+				{#snippet graphic(step)}<StageCharts cube={cube!} {step} kind="dx" />{/snippet}
+			</StoryScene>
+		</div>
 	</div>
 
 	<main id="explore" class="explore">
 		<header class="explore-head">
-			<span class="num">06</span>
+			<span class="num">5</span>
 			<div>
 				<div class="kicker">Explore</div>
 				<h2>Your turn: test the pattern yourself</h2>
@@ -252,12 +315,6 @@
 	@media (prefers-reduced-motion: reduce) { :global(html) { scroll-behavior: auto; } }
 
 	.story { position: relative; padding-bottom: 8vh; }
-	.focus-banner {
-		position: sticky; top: 12px; z-index: 20; width: fit-content; margin: 16px auto 0;
-		padding: 8px 14px; border-radius: 999px; background: #172b4d; color: #fff; font-size: 0.85rem;
-		box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-	}
-	.focus-banner button { margin-left: 10px; font: inherit; font-size: 0.8rem; color: #9cc0ff; background: none; border: 0; cursor: pointer; text-decoration: underline; }
 
 	.explore { max-width: 1240px; margin: 0 auto; padding: 10vh 28px 60px; }
 	.explore-head { display: flex; gap: 18px; align-items: baseline; margin-bottom: 18px; }
