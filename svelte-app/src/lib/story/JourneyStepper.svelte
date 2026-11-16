@@ -4,7 +4,13 @@
 -->
 <script lang="ts">
 	import { filters } from '#lib/state.svelte.ts';
-	import { CARDIAC_ALL } from '#lib/cube.ts';
+	import { ALL, CARDIAC_ALL } from '#lib/cube.ts';
+
+	const SEXES = [
+		{ v: ALL, label: 'All' },
+		{ v: 'Female', label: 'Women' },
+		{ v: 'Male', label: 'Men' }
+	];
 
 	let { stages }: { stages: { id: string; label: string }[] } = $props();
 
@@ -39,6 +45,13 @@
 			{/if}
 		{/each}
 	</ol>
+	<div class="sex" role="group" aria-label="Gender: re-run every story chart for one gender">
+		<span class="sex-lbl">Gender</span>
+		{#each SEXES as s}
+			<button class:on={filters.gender === s.v} aria-pressed={filters.gender === s.v}
+				onclick={() => (filters.gender = s.v)}>{s.label}</button>
+		{/each}
+	</div>
 	{#if filters.group !== CARDIAC_ALL}
 		<div class="focus">
 			Following: <b>{filters.group}</b>
@@ -65,6 +78,10 @@
 	li.now .dot { background: #ffcc33; border-color: #172b4d; color: #172b4d; box-shadow: 0 0 0 4px #ffe9a6; }
 	li.line { flex: 1; height: 3px; min-width: 12px; background: #cbd5e1; border-radius: 2px; transition: background 0.4s; }
 	li.line.done { background: #172b4d; }
+	.sex { display: inline-flex; align-items: center; gap: 2px; background: #fff; border: 1px solid #cbd5e1; border-radius: 999px; padding: 2px; }
+	.sex-lbl { font-size: 0.72rem; font-weight: 800; color: #64748b; padding: 0 6px 0 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+	.sex button { font: inherit; font-size: 0.78rem; font-weight: 700; border: 0; background: transparent; color: #334155; border-radius: 999px; padding: 3px 10px; cursor: pointer; transition: background 0.3s, color 0.3s; }
+	.sex button.on { background: #172b4d; color: #fff; }
 	.focus { font-size: 0.8rem; color: #334155; }
 	.focus button { margin-left: 6px; font: inherit; font-size: 0.75rem; border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; padding: 2px 8px; cursor: pointer; }
 	@media (max-width: 700px) { .lbl { display: none; } li.now .lbl { display: inline; } }

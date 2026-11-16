@@ -47,7 +47,8 @@
 		const t = d.reduce((a, b) => a + b, 0);
 		return t ? d[0] / t : 0;
 	};
-	const G = $derived(filters.group === CARDIAC_ALL ? 'cardiac' : filters.group);
+	const sexWord = $derived(filters.gender === 'Female' ? 'female ' : filters.gender === 'Male' ? 'male ' : '');
+	const G = $derived(sexWord + (filters.group === CARDIAC_ALL ? 'cardiac' : filters.group));
 	const Gc = $derived(G.charAt(0).toUpperCase() + G.slice(1));
 
 	const N = $derived.by(() => {
@@ -103,8 +104,10 @@
 			dx3F: f ? share(f.dx, 3) : 0, dx3B: b ? share(b.dx, 3) : 0, // index 3 = "3 diagnoses"
 			dx3HomeF: dx3(filters.group, 'Home'), dx3HomeB: dx3(NON_CARDIAC, 'Home'),
 			total: cb.meta.total_encounters,
-			cardiac: storyCell(cb, CARDIAC_ALL)?.n ?? 0,
-			losC: storyCell(cb, CARDIAC_ALL)?.los.median ?? 0
+			// hero numbers are always for everyone (not affected by the gender switch)
+			cardiac: storyCell(cb, CARDIAC_ALL, { gender: ALL })?.n ?? 0,
+			losC: storyCell(cb, CARDIAC_ALL, { gender: ALL })?.los.median ?? 0,
+			losNAll: storyCell(cb, NON_CARDIAC, { gender: ALL })?.los.median ?? 0
 		};
 	});
 
@@ -148,7 +151,7 @@
 {:else if !cube || !N}
 	<p class="status">Loading…</p>
 {:else}
-	<Hero total={N.total} cardiac={N.cardiac} losC={N.losC} losN={N.losB ?? 0} />
+	<Hero total={N.total} cardiac={N.cardiac} losC={N.losC} losN={N.losNAll} />
 
 	<div id="story" class="story">
 		<JourneyStepper stages={[

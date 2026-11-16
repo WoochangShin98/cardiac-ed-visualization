@@ -5,6 +5,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Scrolly from './Scrolly.svelte';
+	import { filters } from '#lib/state.svelte.ts';
 
 	let {
 		num,
@@ -48,6 +49,9 @@
 		</div>
 		<div class="graphic">
 			<div class="graphic-inner">
+				{#if filters.gender !== 'All'}
+					<div class="sexchip">{filters.gender === 'Female' ? 'Women' : 'Men'} only</div>
+				{/if}
 				{@render graphic(step)}
 			</div>
 		</div>
@@ -84,6 +88,11 @@
 		background: #fff; border-radius: 20px; border: 1px solid #e6ebf3;
 		box-shadow: 0 16px 40px rgba(23, 43, 77, 0.08);
 		padding: 22px 24px; display: flex; flex-direction: column;
+	}
+	.sexchip {
+		position: absolute; top: 14px; right: 16px; z-index: 3;
+		font-size: 0.75rem; font-weight: 800; color: #fff; background: #172b4d;
+		border-radius: 999px; padding: 3px 10px; letter-spacing: 0.02em;
 	}
 
 	@media (max-width: 860px) {

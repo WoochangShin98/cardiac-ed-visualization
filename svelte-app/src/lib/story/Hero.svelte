@@ -24,6 +24,10 @@
 			MIMIC-IV-ED (Beth Israel Deaconess Medical Center, 2011–2019), we follow one patient from arrival
 			to disposition — and test whether the differences survive a closer look.
 		</p>
+		<p class="lede hint">
+			Tip: use the <b>Gender</b> switch in the bar at the top to re-run every chart for women or men only
+			and check whether each pattern still holds.
+		</p>
 		<div class="metrics">
 			<div class="metric"><span>ED visits analysed</span><strong>{fmtInt(total * t.current)}</strong></div>
 			<div class="metric"><span>Cardiac-related</span><strong>{fmtInt(cardiac * t.current)}</strong></div>
@@ -50,6 +54,8 @@
 	.inner { position: relative; max-width: 1180px; margin: 0 auto; padding: 80px 28px; }
 	.eyebrow { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #9cc0ff; }
 	h1 { margin: 18px 0 0; max-width: 940px; font-size: clamp(2.2rem, 5vw, 4rem); line-height: 1.06; letter-spacing: -0.035em; }
+	.lede.hint { margin-top: 12px; font-size: 0.98rem; color: #aebfdc; }
+	.lede.hint b { color: #ffcc33; }
 	.lede { max-width: 720px; margin: 22px 0 0; font-size: 1.12rem; line-height: 1.7; color: #d3def0; }
 	.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 44px; }
 	.metric { padding: 18px 20px; border-radius: 16px; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.1); }
