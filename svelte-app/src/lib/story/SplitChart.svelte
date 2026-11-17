@@ -44,6 +44,15 @@
 		}))
 	);
 
+	// unified gender view in the tooltip: women and men side by side, no need to toggle
+	const sexLine = (g: string, i: number) => {
+		const o = { acuity: step === 0 ? ALL : levels[i], dispo };
+		const f = storyCell(cube, g, { ...o, gender: 'Female' })?.los.median;
+		const mm = storyCell(cube, g, { ...o, gender: 'Male' })?.los.median;
+		if (f == null || mm == null) return 'Women / men: too few visits to compare';
+		return `Women ${fmt1(f)} h · Men ${fmt1(mm)} h (gap ${f - mm >= 0 ? '+' : ''}${fmt1(f - mm)} h)`;
+	};
+
 	const geo = Tween.of(
 		() =>
 			cells.map((c, i) => {
@@ -97,7 +106,7 @@
 						<text x={m.left + 6} y={cy + 4} class="hint">{b.name === NON_CARDIAC ? 'Non-cardiac' : 'Cardiac'}: too few visits to show</text>
 					{/if}
 					<g role="presentation" style:opacity={b.o}
-						onmousemove={(e) => b.cell && showTip(e, [`${b.name} · ${step === 0 ? 'all acuities' : 'acuity ' + levels[i]}`, `Median ${fmt1(b.cell.los.median)} h (IQR ${fmt1(b.cell.los.q1)}–${fmt1(b.cell.los.q3)})`, `n = ${fmtInt(b.cell.los.n)}`])}
+						onmousemove={(e) => b.cell && showTip(e, [`${b.name} · ${step === 0 ? 'all acuities' : 'acuity ' + levels[i]}`, `Median ${fmt1(b.cell.los.median)} h (IQR ${fmt1(b.cell.los.q1)}–${fmt1(b.cell.los.q3)})`, `n = ${fmtInt(b.cell.los.n)}`, sexLine(b.name, i)])}
 						onmouseleave={hideTip}>
 						<line x1={x(b.s[0])} x2={x(b.s[4])} y1={cy} y2={cy} stroke={b.col} stroke-width="1.5" />
 						<rect x={x(b.s[1])} y={cy - boxH / 2} width={Math.max(1, x(b.s[3]) - x(b.s[1]))} height={boxH} fill={b.col} fill-opacity="0.2" stroke={b.col} rx="3" />

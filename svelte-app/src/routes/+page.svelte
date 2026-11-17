@@ -13,6 +13,11 @@
 	import MorphChart from '#lib/story/MorphChart.svelte';
 	import ExplodeChart from '#lib/story/ExplodeChart.svelte';
 	import JourneyStepper from '#lib/story/JourneyStepper.svelte';
+	import RaceScene from '#lib/story/RaceScene.svelte';
+	import WaffleScene from '#lib/story/WaffleScene.svelte';
+	import FlowScene from '#lib/story/FlowScene.svelte';
+	import ConditionMap from '#lib/story/ConditionMap.svelte';
+	import StayMatrix from '#lib/story/StayMatrix.svelte';
 	import PatientScene from '#lib/story/PatientScene.svelte';
 	import StageCharts from '#lib/story/StageCharts.svelte';
 
@@ -111,6 +116,22 @@
 		};
 	});
 
+	// privacy: share of cardiac visits that fall in hidden cells at the most detailed level we show
+	const hiddenShare = $derived.by(() => {
+		if (!cube) return null;
+		const vd = cube.meta.dim_values;
+		const conds = vd.group.filter((g) => ![ALL, NON_CARDIAC, CARDIAC_ALL].includes(g));
+		let total = 0, shown = 0;
+		for (const g of conds) {
+			total += cube.cells[`${g}|All|All|All|All`]?.n ?? 0;
+			for (const a of vd.acuity.filter((x) => x !== ALL))
+				for (const d of vd.dispo.filter((x) => x !== ALL))
+					for (const s of vd.gender.filter((x) => x !== ALL))
+						shown += cube.cells[`${g}|${a}|${d}|${s}|All`]?.n ?? 0;
+		}
+		return total ? Math.max(0, 1 - shown / total) : null;
+	});
+
 	const mostly = (x: { k: number; n: number }) => x.n > 0 && x.k >= Math.max(1, x.n - 1);
 	const few = (x: { k: number; n: number }) => x.k <= Math.floor(x.n / 2);
 	const verdict = (x: { k: number; n: number }) =>
@@ -165,7 +186,12 @@
 		<!-- ================= Stage 1 · Arrival ================= -->
 		<div id="stage-arrival">
 			<PatientScene stage={0} kicker="Stage 1 · Arrival" title="You arrive at the emergency department"
-				narration="You feel a tight pain in your chest and head to the ED. Even how you get here says something." />
+				narration="You feel a tight pain in your chest and head to the ED. Even how you get here says something."
+				terms={[
+					{ t: 'Cardiac (our definition)', d: 'A visit with at least one heart-related ED diagnosis, grouped into 5 conditions: MI, heart failure, arrhythmia, other cardiovascular, chest pain.' },
+					{ t: 'Arrival transport', d: 'How the patient got to the ED: ambulance, helicopter, walk-in, or other.' },
+					{ t: 'Vital signs', d: 'Heart rate, blood pressure, oxygen level, breathing rate and temperature, measured when the patient arrives.' }
+				]} />
 			<StoryScene num="1" kicker="Arrival" title="Who comes in, and how?"
 				steps={[
 					`<b class="c">${pct(N.ambF)}</b> of ${G} patients arrive by ambulance, compared with <b class="n">${pct(N.ambB)}</b> of everyone else.`,
@@ -179,7 +205,12 @@
 		<div id="stage-triage">
 			<PatientScene stage={1} kicker="Stage 2 · Triage" title="A nurse decides how urgent you are"
 				narration="A triage nurse checks your vital signs and asks: on a scale of 0 to 10, how bad is the pain?"
-				recap={`${pct(N.ambF)} of ${G} patients arrived by ambulance, yet their vital signs look similar to others’.`} />
+				recap={`${pct(N.ambF)} of ${G} patients arrived by ambulance, yet their vital signs look similar to others’.`}
+				terms={[
+					{ t: 'Triage', d: 'The first check by a nurse, who decides how quickly the patient needs care.' },
+					{ t: 'Acuity (ESI 1–5)', d: '1 = needs care immediately, 5 = least urgent. A lower number means more urgent.' },
+					{ t: 'Pain score', d: 'Pain reported by the patient, from 0 (none) to 10 (worst imaginable).' }
+				]} />
 			<StoryScene num="2" kicker="Triage" title="More urgent, but less pain"
 				steps={[
 					`Triage assigns every visit an acuity from <b>1 (most urgent)</b> to <b>5</b>.`,
@@ -198,7 +229,13 @@
 		<div id="stage-stay">
 			<PatientScene stage={2} kicker="Stage 3 · ED stay" title="Then you wait: tests, results, a decision"
 				narration="You are moved to an ED bed. Blood tests, an ECG, maybe a repeat test hours later…"
-				recap={`<b class="c">${pct(N.acu12F)}</b> of ${G} visits are triaged acuity 1–2 (vs ${pct(N.acu12B)}), yet fewer report severe pain.`} />
+				recap={`<b class="c">${pct(N.acu12F)}</b> of ${G} visits are triaged acuity 1–2 (vs ${pct(N.acu12B)}), yet fewer report severe pain.`}
+				terms={[
+					{ t: 'ED stay (length of stay)', d: 'Total time from arriving at the ED to leaving it: waiting, tests, treatment, and waiting for a hospital bed. Not just time with a doctor.' },
+					{ t: 'Median', d: 'The middle value: half of visits are shorter, half are longer. Less affected by a few very long stays than the average.' },
+					{ t: 'Box plot', d: 'The box holds the middle 50% of visits; the thick tick is the median; the line spans the 10th to 90th percentile.' }
+				]} />
+			<RaceScene cube={cube!} />
 			<StoryScene num="3" kicker="ED stay" title="Cardiac patients stay longer"
 				steps={[
 					`Most emergency visits are short. For <b class="n">non-cardiac</b> patients the median stay is <b class="n">${fmt1(N.losB)} hours</b>.`,
@@ -214,6 +251,13 @@
 				]}>
 				{#snippet graphic(step)}<SplitChart cube={cube!} {step} />{/snippet}
 			</StoryScene>
+			<StoryScene num="3" kicker="ED stay" title="Condition, urgency and gender in one view"
+				steps={[
+					`Instead of one bar chart per question, this matrix holds <b>four things at once</b>: heart condition (rows), triage acuity (columns), gender (the two halves of each cell) and median stay (color).`,
+					`Now the color shows the <b>gap between women and men</b>. Purple means women stay longer; teal means men do. Read across a row to see whether the gap holds at every urgency level.`
+				]}>
+				{#snippet graphic(step)}<StayMatrix cube={cube!} {step} />{/snippet}
+			</StoryScene>
 		</div>
 
 		<!-- ================= Stage 4 · Disposition ================= -->
@@ -221,7 +265,12 @@
 			<PatientScene stage={3} kicker="Stage 4 · Disposition" title="Admitted upstairs, or sent home?"
 				narration="Finally, the doctor comes back with a decision."
 				recap={`${Gc} visits last a median <b class="c">${fmt1(N.losF)} h</b> vs ${fmt1(N.losB)} h, even at the same acuity.`}
-				admitted={pct(N.admF)} home={pct(N.homeF)} />
+				admitted={pct(N.admF)} home={pct(N.homeF)}
+				terms={[
+					{ t: 'Disposition', d: 'Where the patient goes after the ED: admitted, sent home, or other.' },
+					{ t: 'Admitted', d: 'Moved from the ED into a hospital bed for further care.' },
+					{ t: 'Other', d: 'Everything else, e.g. transferred to another hospital or left before treatment was finished.' }
+				]} />
 			<StoryScene num="4" kicker="Disposition" title="Who spends the extra time?"
 				steps={[admText, homeText]}>
 				{#snippet graphic(step)}<SplitChart cube={cube!} step={step + 2} />{/snippet}
@@ -235,6 +284,15 @@
 				]}>
 				{#snippet graphic(step)}<ExplodeChart cube={cube!} {step} />{/snippet}
 			</StoryScene>
+			<StoryScene num="4" kicker="Disposition" title="Every condition on one map"
+				steps={[
+					`Here every heart condition is one bubble: <b>further right</b> = longer ED stay, <b>higher</b> = more often admitted, <b>bigger</b> = more visits.`,
+					`Each bubble now splits into <b>women (circle)</b> and <b>men (diamond)</b>, joined by a line. A long line means a big gender gap; hover for both values.`,
+					`Against the non-cardiac baseline, chest pain sits alone in the <b>longer stay, fewer admitted</b> corner, while MI and heart failure are admitted quickly. Click a bubble to follow that condition.`
+				]}>
+				{#snippet graphic(step)}<ConditionMap cube={cube!} {step} />{/snippet}
+			</StoryScene>
+			<WaffleScene cube={cube!} />
 			<StoryScene num="4" kicker="Disposition" title="More diagnoses to sort out"
 				steps={[
 					`<b class="c">${pct(N.dx3F)}</b> of ${G} visits record 3 or more diagnoses, versus <b class="n">${pct(N.dx3B)}</b> of other visits.`,
@@ -243,6 +301,9 @@
 				{#snippet graphic(step)}<StageCharts cube={cube!} {step} kind="dx" />{/snippet}
 			</StoryScene>
 		</div>
+
+		<!-- ================= Summary · the whole journey ================= -->
+		<FlowScene cube={cube!} />
 	</div>
 
 	<main id="explore" class="explore">
@@ -290,7 +351,7 @@
 			<h3>How to interpret these findings</h3>
 			<ul>
 				<li>Cardiac groups are defined by keywords in ED diagnosis titles — an exploratory definition, not a clinical one.</li>
-				<li>All numbers are aggregated; groups with fewer than {cube.meta.min_cell_size} visits are hidden to protect privacy.</li>
+				<li>All numbers are aggregated; groups with fewer than {cube.meta.min_cell_size} visits are hidden to protect privacy.{#if hiddenShare != null}{' '}At the most detailed level we show (condition × acuity × disposition × gender), hidden groups hold only about <b>{hiddenShare < 0.01 ? '<1%' : pct(hiddenShare)}</b> of cardiac visits, so they barely change the patterns above.{/if}</li>
 				<li>These are associations, not causes.</li>
 				{#if !cube.meta.age_available}<li>Age is not available in MIMIC-IV-ED alone, so it is not yet included.</li>{/if}
 			</ul>
